@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .led-panel {
+            display: grid;
+            grid-template-columns: 40px 40px 40px 40px 40px 40px 40px 40px;
+            grid-template-rows: 40px 40px 40px 40px 40px 40px;
+            direction: rtl;
+            width: min-content;
+        }
+    </style>
+    <script>
+        const getBinaryFromString = (str) => {
+            const arr = str.split('').map(char => char.charCodeAt(0));
+            arr.push(0);
+
+            return arr;
+        };
+
+        let ws = null;
+        let updateWord = getBinaryFromString('update')
+        let state = true;
+
+        for (let i = 0; i < 48; i++) {
+            updateWord.push(0x0);
+            updateWord.push(0x0);
+            updateWord.push(0x0);
+        }
+
+        window.addEventListener('load', () => {
+            const connectButton = document.querySelector('.connect-button');
+            const effectButton = document.querySelector('.effect-button');
+            const panelButtons = document.querySelectorAll('.led-panel > button');
+            const colorPicker = document.querySelector('.color-picker');
+            const brightnessPicker = document.querySelector('.brightness-picker');
+
+            connectButton.addEventListener('click', () => {
+                ws = new WebSocket('wss://zzzorgo.dev/ws');
+                ws.binaryType = "arraybuffer";
+            });
+
+            panelButtons.forEach((button, i) => {
+                button.addEventListener('mouseenter', () => {
+                    const num = Number(button.getAttribute('data-value'));
+
+                    const R = parseInt(colorPicker.value[1] + colorPicker.value[2], 16);
+                    const G = parseInt(colorPicker.value[3] + colorPicker.value[4], 16);
+                    const B = parseInt(colorPicker.value[5] + colorPicker.value[6], 16);
+
+                    updateWord[7 + (num * 3)] = R;
+                    updateWord[8 + (num * 3)] = G;
+                    updateWord[9 + (num * 3)] = B;
+
+                    ws.send(new Uint8Array(updateWord).buffer);
+                    button.style.backgroundColor = colorPicker.value;
+                });
+            });
+
+            brightnessPicker.addEventListener('change', (e) => {
+                const brightnessWord = getBinaryFromString('brightness');
+                const value = Number(e.target.value);
+                brightnessWord.push(value);
+
+                ws.send(new Uint8Array(brightnessWord).buffer);
+            });
+
+            effectButton.addEventListener('click', (e) => {
+                setInterval(() => {
+                    panelButtons.forEach((button) => {
+                        const num = Number(button.getAttribute('data-value'));
+    
+                        const R = parseInt(colorPicker.value[1] + colorPicker.value[2], 16);
+                        const G = parseInt(colorPicker.value[3] + colorPicker.value[4], 16);
+                        const B = parseInt(colorPicker.value[5] + colorPicker.value[6], 16);
+    
+                        updateWord[7 + (num * 3)] = state ? R : 255 - R;
+                        updateWord[8 + (num * 3)] = state ? G : 255 - G;
+                        updateWord[9 + (num * 3)] = state ? B : 255 - B;
+                    });
+
+                    ws.send(new Uint8Array(updateWord).buffer);
+                    state = !state;
+                }, 200);
+            });
+        });
+
+        window.addEventListener('unload', () => {
+            if (ws) {
+                ws.close();
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <div class="led-panel">
+        <button data-value="5"></button><button data-value="6"></button><button data-value="17"></button><button
+            data-value="18"></button><button data-value="29"></button><button data-value="30"></button><button
+            data-value="41"></button><button data-value="42"></button>
+        <button data-value="4"></button><button data-value="7"></button><button data-value="16"></button><button
+            data-value="19"></button><button data-value="28"></button><button data-value="31"></button><button
+            data-value="40"></button><button data-value="43"></button>
+        <button data-value="3"></button><button data-value="8"></button><button data-value="15"></button><button
+            data-value="20"></button><button data-value="27"></button><button data-value="32"></button><button
+            data-value="39"></button><button data-value="44"></button>
+        <button data-value="2"></button><button data-value="9"></button><button data-value="14"></button><button
+            data-value="21"></button><button data-value="26"></button><button data-value="33"></button><button
+            data-value="38"></button><button data-value="45"></button>
+        <button data-value="1"></button><button data-value="10"></button><button data-value="13"></button><button
+            data-value="22"></button><button data-value="25"></button><button data-value="34"></button><button
+            data-value="37"></button><button data-value="46"></button>
+        <button data-value="0"></button><button data-value="11"></button><button data-value="12"></button><button
+            data-value="23"></button><button data-value="24"></button><button data-value="35"></button><button
+            data-value="36"></button><button data-value="47"></button>
+    </div>
+    <button class="connect-button">connect</button>
+    <button class="effect-button">effect</button>
+    <input class="color-picker" type="color" />
+    <input class="brightness-picker" type="range" min="0" max="255" />
+</body>
+
+</html>

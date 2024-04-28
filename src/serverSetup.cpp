@@ -44,7 +44,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
         if (info->final && info->index == 0 && info->len == len)
         {
             // the whole message is in a single frame and we got all of it's data
-            smartLog("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT) ? "text" : "binary", info->len);
+            // smartLog("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT) ? "text" : "binary", info->len);
             if (info->opcode == WS_TEXT)
             {
                 data[len] = 0;
@@ -68,7 +68,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
             }
             else
             {
-                smartLog("%s\n", (char *)data);
+                // smartLog("%s\n", (char *)data);
                 for (int i = 0; i < 10; i++)
                 {
                     OtaCommand command = localCommands.at(i);
@@ -77,7 +77,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
                     if (strcmp((char *)data, command.key) == 0)
                     {
                         command.callback(commandKeyLength, data);
-                        smartLog("Command executed successfully: %s", command.key);
+                        // smartLog("Command executed successfully: %s", command.key);
 
                         break;
                     }

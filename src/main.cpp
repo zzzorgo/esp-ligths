@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include <WiFi.h>
+#include <ArduinoJson.h>
 
 #include "constants.h"
 #include "rainbow.h"
@@ -33,6 +34,16 @@ const int A_LETTER[14][2] = {
     {5, 0},
     {5, 3},
 };
+
+struct EffectFrame
+{
+  int delay;
+  int data[COUNT * 3];
+};
+
+EffectFrame effect[10];
+
+bool play = false;
 
 void test()
 {
@@ -132,20 +143,55 @@ void setup()
 
   smartLog("[Wifi] Connected! %s", WiFi.localIP().toString().c_str());
 
-      commands.push_back({
-        .key = "update",
-        .callback = [](int offset, unsigned char* data) {
-          smartLog("update\n");
-          for (int i = offset + 1; i < offset + (COUNT * 3); i += 3)
-          {
-            strip.setPixelColor((i - offset - 1)/3, data[i], data[i + 1], data[i + 2]);
-          }
+  commands.push_back({.key = "update",
+                      .callback = [](int offset, unsigned char *data)
+                      {
+                        // smartLog("update\n");
+                        for (int i = offset + 1; i < offset + (COUNT * 3); i += 3)
+                        {
+                          strip.setPixelColor((i - offset - 1) / 3, data[i], data[i + 1], data[i + 2]);
+                        }
 
-          strip.show();
-        }
-    });
+                        strip.show();
+                      }});
 
-    setupServer(commands);
+  commands.push_back({.key = "json",
+                      .callback = [](int offset, unsigned char *data)
+                      {
+                        JsonDocument doc;
+                        deserializeJson(doc, &data[offset]);
+                        JsonArray frames = doc.as<JsonArray>();
+
+                        int i = 0;
+                        for (JsonObject frame : frames)
+                        {
+                          EffectFrame effectFrame;
+
+                          effectFrame.delay = frame["delay"].as<int>();
+                          JsonArray frameData = frame["data"].as<JsonArray>();
+
+                          int j = 0;
+                          for (JsonVariant num : frameData)
+                          {
+                            effectFrame.data[j] = num.as<int>();
+                            j++;
+                          }
+
+                          effect[i] = effectFrame;
+                          i++;
+                        }
+
+                        play = true;
+                      }});
+  commands.push_back({.key = "brightness",
+                      .callback = [](int offset, unsigned char *data)
+                      {
+                        int brightness = data[offset + 1];
+                        strip.setBrightness(brightness);
+                        strip.show();
+                      }});
+
+  setupServer(commands);
 
   for (int i = 0; i < COUNT; i++)
   {
@@ -164,8 +210,21 @@ void off()
 
 void loop()
 {
+  if (play) {
+    for (size_t i = 0; i < 2; i++)
+    {
+      for (size_t j = 0; j < COUNT * 3; j += 3)
+      {
+        strip.setPixelColor(j / 3, effect[i].data[j], effect[i].data[j + 1], effect[i].data[j + 2]);
+      }
+
+      strip.show();
+
+      delay(effect[i].delay);
+    }
+  }
   // rainbow(&strip);
-  delay(16);
+  // delay(1000);
   // off();
   // delay(1000);
   // test();
